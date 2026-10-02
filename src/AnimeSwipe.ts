@@ -91,6 +91,10 @@ function init() {
         overlay.setCssText("position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.82);display:flex;flex-direction:column;" +
           "align-items:center;justify-content:center;gap:14px;font:14px system-ui,sans-serif;")
         const frame = await ctx.dom.createElement("iframe")
+        // Seanime Denshi's page is cross-origin isolated (COEP: credentialless):
+        // a frame from another site loads only as a credentialless frame, else
+        // it's a blank error page. Set before src, so the first load gets it.
+        frame.setAttribute("credentialless", "true")
         frame.setAttribute("src", PLAYER_URL + id)
         frame.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture; fullscreen")
         frame.setAttribute("allowfullscreen", "true")
