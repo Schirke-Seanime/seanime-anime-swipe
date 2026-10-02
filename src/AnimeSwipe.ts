@@ -3,7 +3,8 @@
 /// <reference path="./core.d.ts" />
 
 // Anime Swipe: one anime at a time that isn't in your list yet. Swipe right
-// (or press →) to add it to Planning, left to pass, up if you've seen it.
+// (or press →) to add it to Planning, left to pass, up to skip it for now
+// (it comes back in a month).
 // Pick a genre and a subgenre (the AniList tags most common in that genre,
 // like Isekai under Fantasy); the deck is ordered by how well each show fits
 // your taste. Shows you've decided on never come back. Trailers play in a
@@ -142,6 +143,8 @@ function createAnimeSwipe() {
   const LIST_KEY = "sw-list-v1"
   const DECIDED_KEY = "sw-decided"
   const LIST_TTL = 10 * 60000
+  // "Later" hides a show for this long; then it can come up again.
+  const LATER_DAYS = 30
   const PAGES_PER_DEAL = 3
   const GEM_SCORE = 75
   const GEM_POPULARITY = 50000
@@ -419,7 +422,15 @@ function createAnimeSwipe() {
       const skip: { [id: string]: boolean } = {}
       for (const id of list.ids) skip[String(id)] = true
       const decided = $storage.get(DECIDED_KEY) || {}
-      for (const id in decided) skip[id] = true
+      // Shows put off for later come back after LATER_DAYS ("seen" is what
+      // "later" was called before 1.2).
+      let expired = false
+      for (const id in decided) {
+        const d = decided[id]
+        if ((d.a === "later" || d.a === "seen") && Date.now() - d.at > LATER_DAYS * 86400000) { delete decided[id]; expired = true }
+        else skip[id] = true
+      }
+      if (expired) $storage.set(DECIDED_KEY, decided)
       // No sequels: of a show you haven't seen they're no use, and Seanime
       // already lists the missed sequels of the ones you have.
       const cards = got.media
@@ -453,10 +464,11 @@ function createAnimeSwipe() {
   // Decisions
   // ---------------------------------------------------------------------------
 
-  // plan: add to your Planning list; pass and seen: just never show it again.
+  // plan: add to your Planning list; pass: never show it again; later: not
+  // for a month.
   // Returns an error message, or "" if all went well.
   function decide(id: number, action: string, show: any): string {
-    if (["plan", "pass", "seen"].indexOf(action) < 0) return ""
+    if (["plan", "pass", "later"].indexOf(action) < 0) return ""
     let error = ""
     if (action === "plan") {
       try {
@@ -498,11 +510,13 @@ function createAnimeSwipe() {
   // Counts, and the shows you added most recently.
   function stats(): any {
     const decided = $storage.get(DECIDED_KEY) || {}
-    const out = { plan: 0, pass: 0, seen: 0, recent: [] as any[] }
+    const out = { plan: 0, pass: 0, later: 0, recent: [] as any[] }
     const added: any[] = []
     for (const id in decided) {
       const d = decided[id]
-      if (d.a in out) (out as any)[d.a]++
+      if (d.a === "plan") out.plan++
+      else if (d.a === "pass") out.pass++
+      else if (Date.now() - d.at <= LATER_DAYS * 86400000) out.later++
       if (d.a === "plan") added.push({ id: Number(id), title: d.t, cover: d.c, at: d.at })
     }
     added.sort((a, b) => b.at - a.at)
@@ -592,7 +606,7 @@ function createAnimeSwipe() {
   .card.top { z-index: 1; position: relative; }
   .card.fly-plan { transform: translateX(130%) rotate(16deg); opacity: 0; }
   .card.fly-pass { transform: translateX(-130%) rotate(-16deg); opacity: 0; }
-  .card.fly-seen { transform: translateY(-120%); opacity: 0; }
+  .card.fly-later { transform: translateY(-120%); opacity: 0; }
   .card .poster { width: 290px; height: 412px; flex: none; border-radius: 14px; object-fit: cover; background: #222; pointer-events: none; display: block; }
   .poster-wrap { position: relative; flex: none; }
   .trailer { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); white-space: nowrap; font-weight: 650;
@@ -618,13 +632,13 @@ function createAnimeSwipe() {
     font-weight: 800; letter-spacing: .08em; opacity: 0; pointer-events: none; text-transform: uppercase; }
   .stamp.plan { left: 34px; color: var(--green); border-color: var(--green); transform: rotate(-14deg); }
   .stamp.pass { right: 34px; color: var(--red); border-color: var(--red); transform: rotate(14deg); }
-  .stamp.seen { left: 50%; top: auto; bottom: 30px; transform: translateX(-50%); color: var(--blue); border-color: var(--blue); }
+  .stamp.later { left: 50%; top: auto; bottom: 30px; transform: translateX(-50%); color: var(--blue); border-color: var(--blue); }
 
   .actions { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0 6px; }
   .act { width: 64px; height: 64px; border-radius: 99px; padding: 0; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; }
   .act.pass { color: var(--red); }
   .act.plan { color: var(--green); width: 74px; height: 74px; font-size: 30px; }
-  .act.seen { color: var(--blue); width: 54px; height: 54px; font-size: 20px; }
+  .act.later { color: var(--blue); width: 54px; height: 54px; font-size: 20px; }
   .act.undo { color: var(--muted); width: 46px; height: 46px; font-size: 18px; }
   .act:hover { transform: scale(1.06); }
   .keys { text-align: center; color: var(--muted); font-size: 12px; }
@@ -699,6 +713,9 @@ function applyTheme(top) {
   css.setProperty("--brand", brand);
   css.setProperty("--on-brand", onBrand);
 }
+function statsText(s) {
+  return s.plan + " added to Planning · " + s.pass + " passed" + (s.later ? " · " + s.later + " for later" : "");
+}
 function users(n) { return n >= 1000000 ? (n / 1000000).toFixed(1) + "M" : n >= 1000 ? Math.round(n / 1000) + "k" : String(n); }
 
 // ---------- match tooltip ----------
@@ -741,7 +758,7 @@ function cardHtml(c, cls) {
   if (c.status === "RELEASING") meta.push("airing");
   if (c.studios.length) meta.push(esc(c.studios.join(", ")));
   return '<div class="card ' + cls + '" data-id="' + c.id + '">' +
-    '<div class="stamp plan">Plan</div><div class="stamp pass">Nope</div><div class="stamp seen">Seen</div>' +
+    '<div class="stamp plan">Plan</div><div class="stamp pass">Nope</div><div class="stamp later">Later</div>' +
     '<div class="poster-wrap"><img class="poster" src="' + esc(c.cover) + '" draggable="false">' +
     (c.trailer ? '<button class="trailer" data-act="trailer" title="Watch the trailer (T)">▶ Trailer</button>' : '') + '</div>' +
     '<div class="info"><h2>' + esc(c.title) + '</h2>' + (c.english ? '<div class="en">' + esc(c.english) + '</div>' : '') +
@@ -786,8 +803,8 @@ function render() {
   var root = document.getElementById("root");
   if (!DATA) { root.innerHTML = '<div class="empty">Loading…</div>'; return; }
   var f = filter();
-  var s = DATA.stats || { plan: 0, pass: 0, seen: 0 };
-  var sub = s.plan + " added to Planning · " + (s.pass + s.seen) + " passed";
+  var s = DATA.stats || { plan: 0, pass: 0, later: 0 };
+  var sub = statsText(s);
   var genres = '<button class="chip' + (!f.genre ? " on" : "") + '" data-act="genre" data-v="">Any</button>' +
     (DATA.genres || []).map(function (g) { return '<button class="chip' + (f.genre === g ? " on" : "") + '" data-act="genre" data-v="' + esc(g) + '">' + esc(g) + '</button>'; }).join("");
   var tags = (DATA.tags || []).slice();
@@ -803,9 +820,9 @@ function render() {
     '<div class="stage" id="stage"></div>' +
     '<div class="actions"><button class="act undo" data-act="undo" title="Undo (Z)">↶</button>' +
     '<button class="act pass" data-act="pass" title="Not interested (←)">✕</button>' +
-    '<button class="act seen" data-act="seen" title="Seen it (↑)">👁</button>' +
+    '<button class="act later" data-act="later" title="Later: skip it for now, it comes back in a month (↑)">⏭</button>' +
     '<button class="act plan" data-act="plan" title="Add to Planning (→)">♥</button></div>' +
-    '<div class="keys"><b>←</b> not interested · <b>↑</b> seen it · <b>→</b> add to Planning · <b>Z</b> undo · <b>T</b> trailer · drag the card</div>' +
+    '<div class="keys"><b>←</b> not interested · <b>↑</b> later (back in a month) · <b>→</b> add to Planning · <b>Z</b> undo · <b>T</b> trailer · drag the card</div>' +
     (DATA.actionError ? '<div class="toast">' + esc(DATA.actionError) + '</div>' : '') +
     '<section id="added"></section>';
   renderStage();
@@ -861,17 +878,17 @@ function bindDrag(el) {
     var up = DRAG.dy < -60 && Math.abs(DRAG.dy) > Math.abs(DRAG.dx);
     el.querySelector(".stamp.plan").style.opacity = up ? 0 : Math.max(0, Math.min(1, DRAG.dx / 120));
     el.querySelector(".stamp.pass").style.opacity = up ? 0 : Math.max(0, Math.min(1, -DRAG.dx / 120));
-    el.querySelector(".stamp.seen").style.opacity = up ? Math.min(1, -DRAG.dy / 140) : 0;
+    el.querySelector(".stamp.later").style.opacity = up ? Math.min(1, -DRAG.dy / 140) : 0;
   });
   var end = function () {
     if (!DRAG || DRAG.el !== el) return;
     var d = DRAG; DRAG = null;
     el.classList.remove("dragging");
-    if (d.dy < -110 && Math.abs(d.dy) > Math.abs(d.dx)) return decide("seen");
+    if (d.dy < -110 && Math.abs(d.dy) > Math.abs(d.dx)) return decide("later");
     if (d.dx > 120) return decide("plan");
     if (d.dx < -120) return decide("pass");
     el.style.transform = "";
-    ["plan", "pass", "seen"].forEach(function (s) { el.querySelector(".stamp." + s).style.opacity = 0; });
+    ["plan", "pass", "later"].forEach(function (s) { el.querySelector(".stamp." + s).style.opacity = 0; });
   };
   el.addEventListener("pointerup", end);
   el.addEventListener("pointercancel", end);
@@ -881,7 +898,7 @@ document.addEventListener("keydown", function (ev) {
   if (!DATA || ev.ctrlKey || ev.metaKey || ev.altKey) return;
   if (ev.key === "ArrowRight") { ev.preventDefault(); decide("plan"); }
   else if (ev.key === "ArrowLeft") { ev.preventDefault(); decide("pass"); }
-  else if (ev.key === "ArrowUp") { ev.preventDefault(); decide("seen"); }
+  else if (ev.key === "ArrowUp") { ev.preventDefault(); decide("later"); }
   else if (ev.key === "z" || ev.key === "Z" || ev.key === "Backspace") { ev.preventDefault(); undo(); }
   else if (ev.key === "t" || ev.key === "T") { ev.preventDefault(); trailer(); }
   else if (ev.key === "Escape") send("close-trailer");
@@ -903,7 +920,7 @@ document.addEventListener("click", function (ev) {
   var act = el.getAttribute("data-act"), v = el.getAttribute("data-v");
   var open = el.getAttribute("data-open");
   if (open) { send("open", { id: Number(open) }); return; }
-  if (act === "plan" || act === "pass" || act === "seen") decide(act);
+  if (act === "plan" || act === "pass" || act === "later") decide(act);
   else if (act === "undo") undo();
   else if (act === "trailer") trailer();
   else if (act === "open" && QUEUE[0]) send("open", { id: QUEUE[0].id });
@@ -934,7 +951,7 @@ window.webview.on("data", function (d) {
   }
   // Only counts or an error changed: keep the stage as it is.
   var stage = document.getElementById("stage");
-  if (!stage || d.error || d.loading) render(); else { renderAdded(); var sub = document.querySelector(".head .sub"); if (sub) { var s = d.stats; sub.textContent = s.plan + " added to Planning · " + (s.pass + s.seen) + " passed"; } }
+  if (!stage || d.error || d.loading) render(); else { renderAdded(); var sub = document.querySelector(".head .sub"); if (sub) sub.textContent = statsText(d.stats); }
 });
 render();
 </script>
