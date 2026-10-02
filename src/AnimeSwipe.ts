@@ -70,6 +70,7 @@ function init() {
     const PLAYER_URL = "https://schirke.github.io/seanime-anime-swipe/player.html?v="
     const BUTTON_CSS = "padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);" +
       "color:#eee;font:inherit;cursor:pointer;text-decoration:none;"
+    // Note: elements have append(), not the appendChild() the type file lists.
     let trailer: { overlay: any, off: any } | null = null
 
     function closeTrailer() {
@@ -109,12 +110,12 @@ function init() {
         const close = await ctx.dom.createElement("button")
         close.setText("Close (Esc)")
         close.setCssText(BUTTON_CSS)
-        bar.appendChild(label)
-        bar.appendChild(youtube)
-        bar.appendChild(close)
-        overlay.appendChild(frame)
-        overlay.appendChild(bar)
-        body.appendChild(overlay)
+        bar.append(label)
+        bar.append(youtube)
+        bar.append(close)
+        overlay.append(frame)
+        overlay.append(bar)
+        body.append(overlay)
         // Clicking anywhere around the video closes it (clicks in the video
         // stay in the video).
         overlay.addEventListener("click", () => closeTrailer())

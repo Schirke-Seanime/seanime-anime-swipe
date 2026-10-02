@@ -1,7 +1,7 @@
 {
   "id": "anime-swipe",
   "name": "Anime Swipe",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "manifestURI": "https://raw.githubusercontent.com/Schirke/seanime-anime-swipe/main/src/manifest.json",
   "language": "typescript",
   "type": "plugin",
