@@ -6,7 +6,8 @@
 // (or press →) to add it to Planning, left to pass, up if you've seen it.
 // Pick a genre and a subgenre (the AniList tags most common in that genre,
 // like Isekai under Fantasy); the deck is ordered by how well each show fits
-// your taste. Shows you've decided on never come back.
+// your taste. Shows you've decided on never come back. Trailers play in a
+// window over Seanime.
 
 function init() {
   // Seanime runs the UI handler in its own runtime, from its source text, so
@@ -60,6 +61,72 @@ function init() {
       if (id) ctx.screen.navigateTo("/entry", { id: String(id) })
     })
 
+    // Trailers play in a window over Seanime, not in this page: YouTube's
+    // player doesn't work in the sandboxed frame plugin pages live in. And
+    // since the desktop app's pages have no web address, which YouTube needs
+    // (error 153), the player is loaded through a small page on GitHub Pages
+    // that gives it one (docs/player.html in this repository).
+    const PLAYER_URL = "https://schirke.github.io/seanime-anime-swipe/player.html?v="
+    const BUTTON_CSS = "padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);" +
+      "color:#eee;font:inherit;cursor:pointer;text-decoration:none;"
+    let trailer: { overlay: any, off: any } | null = null
+
+    function closeTrailer() {
+      if (!trailer) return
+      const t = trailer
+      trailer = null
+      try { if (t.off) t.off() } catch (e) { /* already gone */ }
+      try { t.overlay.remove() } catch (e) { /* already gone */ }
+    }
+
+    async function openTrailer(id: string, title: string) {
+      if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) return
+      closeTrailer()
+      try {
+        const body = await ctx.dom.queryOne("body")
+        if (!body) return
+        const overlay = await ctx.dom.createElement("div")
+        overlay.setCssText("position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.82);display:flex;flex-direction:column;" +
+          "align-items:center;justify-content:center;gap:14px;font:14px system-ui,sans-serif;")
+        const frame = await ctx.dom.createElement("iframe")
+        frame.setAttribute("src", PLAYER_URL + id)
+        frame.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture; fullscreen")
+        frame.setAttribute("allowfullscreen", "true")
+        frame.setCssText("width:min(1100px,90vw);aspect-ratio:16/9;border:0;border-radius:14px;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.6);")
+        const bar = await ctx.dom.createElement("div")
+        bar.setCssText("display:flex;gap:10px;align-items:center;color:#ddd;")
+        const label = await ctx.dom.createElement("span")
+        label.setText(title || "")
+        label.setCssText("opacity:.8;max-width:50vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:6px;")
+        // The desktop app opens new-window links in your browser.
+        const youtube = await ctx.dom.createElement("a")
+        youtube.setAttribute("href", "https://www.youtube.com/watch?v=" + id)
+        youtube.setAttribute("target", "_blank")
+        youtube.setAttribute("rel", "noopener noreferrer")
+        youtube.setText("Open on YouTube")
+        youtube.setCssText(BUTTON_CSS)
+        const close = await ctx.dom.createElement("button")
+        close.setText("Close (Esc)")
+        close.setCssText(BUTTON_CSS)
+        bar.appendChild(label)
+        bar.appendChild(youtube)
+        bar.appendChild(close)
+        overlay.appendChild(frame)
+        overlay.appendChild(bar)
+        body.appendChild(overlay)
+        // Clicking anywhere around the video closes it (clicks in the video
+        // stay in the video).
+        overlay.addEventListener("click", () => closeTrailer())
+        const off = body.addEventListener("keydown", (e: any) => { if (e && e.key === "Escape") closeTrailer() })
+        trailer = { overlay, off }
+      } catch (e) {
+        console.error("Anime Swipe: trailer: " + e)
+      }
+    }
+
+    page.channel.on("trailer", (p: any) => { if (p && p.id) openTrailer(String(p.id), String(p.title || "")) })
+    page.channel.on("close-trailer", () => closeTrailer())
+
     const start = () => { if (!payload.get() || !payload.get().deck) deal(S.readPrefs(), false) }
     start()
     page.onMount(start)
@@ -107,6 +174,7 @@ function createAnimeSwipe() {
         startDate { year }
         studios(isMain: true) { nodes { name } }
         tags { name rank isMediaSpoiler }
+        trailer { id site }
         relations { edges { relationType node { id type } } }
       }
     }
@@ -271,6 +339,8 @@ function createAnimeSwipe() {
       match: taste.match,
       why: taste.why,
       gem: (m.averageScore || 0) >= GEM_SCORE && (m.popularity || 0) < GEM_POPULARITY,
+      // YouTube only; AniList also lists a few on Dailymotion.
+      trailer: (m.trailer && m.trailer.site === "youtube" && m.trailer.id) || "",
     }
   }
 
@@ -523,7 +593,11 @@ function createAnimeSwipe() {
   .card.fly-plan { transform: translateX(130%) rotate(16deg); opacity: 0; }
   .card.fly-pass { transform: translateX(-130%) rotate(-16deg); opacity: 0; }
   .card.fly-seen { transform: translateY(-120%); opacity: 0; }
-  .card .poster { width: 290px; height: 412px; flex: none; border-radius: 14px; object-fit: cover; background: #222; pointer-events: none; }
+  .card .poster { width: 290px; height: 412px; flex: none; border-radius: 14px; object-fit: cover; background: #222; pointer-events: none; display: block; }
+  .poster-wrap { position: relative; flex: none; }
+  .trailer { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); white-space: nowrap; font-weight: 650;
+    background: rgba(10,10,14,.72); border-color: rgba(255,255,255,.22); backdrop-filter: blur(4px); padding: 8px 16px; border-radius: 99px; }
+  .trailer:hover { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
   .card .info { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
   .card h2 { margin: 0; font-size: 24px; line-height: 1.2; }
   .card .en { color: var(--muted); font-size: 14px; margin-top: -4px; }
@@ -668,7 +742,8 @@ function cardHtml(c, cls) {
   if (c.studios.length) meta.push(esc(c.studios.join(", ")));
   return '<div class="card ' + cls + '" data-id="' + c.id + '">' +
     '<div class="stamp plan">Plan</div><div class="stamp pass">Nope</div><div class="stamp seen">Seen</div>' +
-    '<img class="poster" src="' + esc(c.cover) + '" draggable="false">' +
+    '<div class="poster-wrap"><img class="poster" src="' + esc(c.cover) + '" draggable="false">' +
+    (c.trailer ? '<button class="trailer" data-act="trailer" title="Watch the trailer (T)">▶ Trailer</button>' : '') + '</div>' +
     '<div class="info"><h2>' + esc(c.title) + '</h2>' + (c.english ? '<div class="en">' + esc(c.english) + '</div>' : '') +
     '<div class="meta">' + meta.join(" · ") + '</div>' +
     '<div class="pills"><span class="score">' + (c.score ? "★ " + (c.score / 10).toFixed(1) : "★ —") + '</span>' +
@@ -730,7 +805,7 @@ function render() {
     '<button class="act pass" data-act="pass" title="Not interested (←)">✕</button>' +
     '<button class="act seen" data-act="seen" title="Seen it (↑)">👁</button>' +
     '<button class="act plan" data-act="plan" title="Add to Planning (→)">♥</button></div>' +
-    '<div class="keys"><b>←</b> not interested · <b>↑</b> seen it · <b>→</b> add to Planning · <b>Z</b> undo · drag the card</div>' +
+    '<div class="keys"><b>←</b> not interested · <b>↑</b> seen it · <b>→</b> add to Planning · <b>Z</b> undo · <b>T</b> trailer · drag the card</div>' +
     (DATA.actionError ? '<div class="toast">' + esc(DATA.actionError) + '</div>' : '') +
     '<section id="added"></section>';
   renderStage();
@@ -756,6 +831,10 @@ function decide(action) {
     renderStage();
   }, 260);
 }
+function trailer() {
+  var c = QUEUE[0];
+  if (c && c.trailer) send("trailer", { id: c.trailer, title: c.title });
+}
 function undo() {
   var last = HISTORY.pop();
   if (!last || BUSY) return;
@@ -770,7 +849,7 @@ var DRAG = null;
 function bindDrag(el) {
   if (!el) return;
   el.addEventListener("pointerdown", function (ev) {
-    if (ev.button !== 0 || (ev.target.closest && ev.target.closest(".link,[data-tip]"))) return;
+    if (ev.button !== 0 || (ev.target.closest && ev.target.closest(".link,.trailer,[data-tip]"))) return;
     DRAG = { x: ev.clientX, y: ev.clientY, dx: 0, dy: 0, el: el, id: ev.pointerId };
     el.setPointerCapture(ev.pointerId);
     el.classList.add("dragging");
@@ -804,6 +883,8 @@ document.addEventListener("keydown", function (ev) {
   else if (ev.key === "ArrowLeft") { ev.preventDefault(); decide("pass"); }
   else if (ev.key === "ArrowUp") { ev.preventDefault(); decide("seen"); }
   else if (ev.key === "z" || ev.key === "Z" || ev.key === "Backspace") { ev.preventDefault(); undo(); }
+  else if (ev.key === "t" || ev.key === "T") { ev.preventDefault(); trailer(); }
+  else if (ev.key === "Escape") send("close-trailer");
 });
 
 function setFilter(p) {
@@ -824,6 +905,7 @@ document.addEventListener("click", function (ev) {
   if (open) { send("open", { id: Number(open) }); return; }
   if (act === "plan" || act === "pass" || act === "seen") decide(act);
   else if (act === "undo") undo();
+  else if (act === "trailer") trailer();
   else if (act === "open" && QUEUE[0]) send("open", { id: QUEUE[0].id });
   else if (act === "desc") { FULL_DESC = !FULL_DESC; renderStage(); }
   // A new genre starts from all its subgenres.

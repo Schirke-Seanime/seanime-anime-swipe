@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Trailer</title>
+<!-- Plays a YouTube trailer for the Anime Swipe plugin for Seanime. The
+     desktop app's pages have no web address, and YouTube refuses to play
+     embeds that don't say where they're embedded (error 153); this page
+     gives the player one. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #aaa; font: 14px system-ui, sans-serif; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  p { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; margin: 0; }
+</style>
+</head>
+<body>
+<script>
+  var v = new URLSearchParams(location.search).get("v") || "";
+  if (/^[A-Za-z0-9_-]{6,20}$/.test(v)) {
+    var f = document.createElement("iframe");
+    f.src = "https://www.youtube-nocookie.com/embed/" + v + "?autoplay=1&playsinline=1&rel=0&modestbranding=1";
+    f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+    f.allowFullscreen = true;
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    document.body.appendChild(f);
+  } else {
+    var p = document.createElement("p");
+    p.textContent = "No trailer.";
+    document.body.appendChild(p);
+  }
+</script>
+</body>
+</html>

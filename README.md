@@ -7,6 +7,7 @@
 ---
 
 - **Swipe** — drag the card or use the keys: **→** adds the show to your Planning list, **←** passes, **↑** if you've already seen it, **Z** undoes.
+- **Trailers** — **▶ Trailer** on the cover (or **T**) plays it in a window over Seanime.
 - **Genre and subgenre** — pick a genre, then one of its subgenres (the AniList tags most common in it, like *Isekai* under *Fantasy*).
 - **Only new to you** — nothing already in your list, no sequels, and nothing you've swiped on comes back. Order: *For you* (your taste and the score), *Top rated*, *Hidden gems*, *Popular* or *Newest*.
 
