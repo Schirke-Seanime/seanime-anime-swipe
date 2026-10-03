@@ -67,7 +67,7 @@ function init() {
     // since the desktop app's pages have no web address, which YouTube needs
     // (error 153), the player is loaded through a small page on GitHub Pages
     // that gives it one (docs/player.html in this repository).
-    const PLAYER_URL = "https://schirke.github.io/seanime-anime-swipe/player.html?v="
+    const PLAYER_URL = "https://schirke-seanime.github.io/seanime-anime-swipe/player.html?v="
     const BUTTON_CSS = "padding:7px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);" +
       "color:#eee;font:inherit;cursor:pointer;text-decoration:none;"
     // Note: elements have append(), not the appendChild() the type file lists.

@@ -16,7 +16,7 @@
 In Seanime, open **Extensions** → **Add extension**, paste the manifest URL and allow the requested permissions:
 
 ```
-https://raw.githubusercontent.com/Schirke/seanime-anime-swipe/main/src/manifest.json
+https://raw.githubusercontent.com/Schirke-Seanime/seanime-anime-swipe/main/src/manifest.json
 ```
 
 The **Anime Swipe** page appears in the sidebar.

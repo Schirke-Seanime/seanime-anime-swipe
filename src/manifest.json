@@ -1,16 +1,16 @@
 {
   "id": "anime-swipe",
   "name": "Anime Swipe",
-  "version": "1.2.2",
-  "manifestURI": "https://raw.githubusercontent.com/Schirke/seanime-anime-swipe/main/src/manifest.json",
+  "version": "1.2.3",
+  "manifestURI": "https://raw.githubusercontent.com/Schirke-Seanime/seanime-anime-swipe/main/src/manifest.json",
   "language": "typescript",
   "type": "plugin",
   "description": "Discover anime you haven't seen, one card at a time: swipe right to add to Planning, left to pass. Filter by genre and subgenre (Fantasy → Isekai).",
   "author": "Schirke",
-  "icon": "https://raw.githubusercontent.com/Schirke/seanime-anime-swipe/main/src/icon.png",
-  "website": "https://github.com/Schirke/seanime-anime-swipe",
+  "icon": "https://raw.githubusercontent.com/Schirke-Seanime/seanime-anime-swipe/main/src/icon.png",
+  "website": "https://github.com/Schirke-Seanime/seanime-anime-swipe",
   "lang": "en",
-  "payloadURI": "https://raw.githubusercontent.com/Schirke/seanime-anime-swipe/main/src/AnimeSwipe.ts",
+  "payloadURI": "https://raw.githubusercontent.com/Schirke-Seanime/seanime-anime-swipe/main/src/AnimeSwipe.ts",
   "plugin": {
     "version": "1",
     "permissions": {
